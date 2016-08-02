@@ -1,0 +1,91 @@
+version: '2'
+
+services:
+    selenium-hub:
+        image: selenium/hub:2.53.0
+        restart: always
+        container_name: selenium-hub
+        hostname: selenium-hub
+        stdin_open: true
+        tty: true
+        ports:
+            - 4444:4444
+        volumes:
+            - /etc/localtime:/etc/localtime:ro
+
+    selenium-node-chrome:
+        image: selenium/node-chrome-debug:2.53.0
+        restart: always
+        container_name: sln-chrome-dbg
+        hostname: chrome-dbg
+        stdin_open: true
+        depends_on:
+            - selenium-hub
+        tty: true
+        environment:
+            - HUB_PORT_4444_TCP_ADDR=selenium-hub
+        ports:
+            - 5900:5900
+        volumes:
+            - /etc/localtime:/etc/localtime:ro
+
+    selenium-node-firefox:
+        image: selenium/node-firefox-debug:2.53.0
+        restart: always
+        container_name: sln-firefox-dbg
+        hostname: firefox-dbg
+        stdin_open: true
+        depends_on:
+            - selenium-hub
+        tty: true
+        environment:
+            - HUB_PORT_4444_TCP_ADDR=selenium-hub
+        ports:
+            - 5901:5900
+        volumes:
+            - /etc/localtime:/etc/localtime:ro
+
+    jenkins:
+        image: demontsai/jenkins:ruckus
+        restart: always
+        container_name: jenkins
+        hostname: jenkins
+        user: root
+        command: /bin/sh -c "sed -i 's/JAVA_OPTS/JAVA_OPTS -Dhudson.model.DirectoryBrowserSupport.CSP=/g' /usr/local/bin/jenkins.sh && /bin/tini -- /usr/local/bin/jenkins.sh"
+        stdin_open: true
+        tty: true
+        depends_on:
+            - selenium-hub
+        ports:
+            - 8080:8080
+        volumes:
+            - /etc/localtime:/etc/localtime:ro
+
+    jenkins-slave:
+        image: demontsai/jenkins-slave:base
+        restart: always
+        container_name: jnkslv
+        hostname: jnkslv
+        stdin_open: true
+        tty: true
+        depends_on:
+            - jenkins
+        volumes:
+            - /etc/localtime:/etc/localtime:ro
+
+    jenkins-slave_website-search:
+        image: demontsai/jenkins-slave:website-search
+        restart: always
+        container_name: jnkslv_website-search
+        hostname: website-search
+        stdin_open: true
+        tty: true
+        depends_on:
+            - jenkins-slave
+        environment:
+            - SLAVE_NAME=slave_website-search
+            - SECRET_KEY=178d7f21399d0ce3be8f3c73d8de80bc7aeab56aed60d6e00c6f4b5abebbde83
+        volumes:
+            - /etc/localtime:/etc/localtime:ro
+
+
